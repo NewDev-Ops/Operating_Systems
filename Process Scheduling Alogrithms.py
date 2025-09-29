@@ -1,5 +1,9 @@
+
+import time
 from collections import deque
 import heapq
+import copy
+
 
 class Process:
     def __init__(self, pid, burst_time, arrival_time=0, priority=0):
@@ -32,125 +36,75 @@ def print_results(name, processes):
     print(f"Average Turnaround Time: {avg_tat:.2f}")
 
 
-def fcfs(processes):
-    time = 0
-    for p in processes:
-        if time < p.arrival_time:
-            time = p.arrival_time
-        p.waiting_time = time - p.arrival_time
-        time += p.burst_time
-        p.turnaround_time = p.waiting_time + p.burst_time
-    print_results("FCFS", processes)
-
-
-def sjf(processes):
-    time = 0
-    completed = []
-    processes = sorted(processes, key=lambda x: (x.arrival_time, x.burst_time))
-    ready = []
-
-    while processes or ready:
-        while processes and processes[0].arrival_time <= time:
-            heapq.heappush(ready, (processes[0].burst_time, processes.pop(0)))
-        if ready:
-            bt, p = heapq.heappop(ready)
-            p.waiting_time = time - p.arrival_time
-            time += p.burst_time
-            p.turnaround_time = p.waiting_time + p.burst_time
-            completed.append(p)
-        else:
-            time += 1
-
-    print_results("SJF", completed)
-
-
-def srtf(processes):
-    time = 0
+# -------------------- SRTF (Preemptive) with time delay --------------------
+def srtf(processes, delay=0.5):
+    time_unit = 0
     ready = []
     completed = []
     processes = sorted(processes, key=lambda x: x.arrival_time)
 
+    print("\nSRTF Execution Timeline:")
     while processes or ready:
-        while processes and processes[0].arrival_time <= time:
+        while processes and processes[0].arrival_time <= time_unit:
             heapq.heappush(ready, (processes[0].remaining_time, processes[0].arrival_time, processes.pop(0)))
+
         if ready:
             rt, at, p = heapq.heappop(ready)
+            print(f"t={time_unit}: Running P{p.pid} (Remaining={p.remaining_time})")
+            time.sleep(delay)  # simulate CPU execution
             p.remaining_time -= 1
-            time += 1
+            time_unit += 1
             if p.remaining_time == 0:
-                p.turnaround_time = time - p.arrival_time
+                p.turnaround_time = time_unit - p.arrival_time
                 p.waiting_time = p.turnaround_time - p.burst_time
                 completed.append(p)
+                print(f"t={time_unit}: P{p.pid} finished")
             else:
                 heapq.heappush(ready, (p.remaining_time, p.arrival_time, p))
         else:
-            time += 1
+            print(f"t={time_unit}: CPU idle")
+            time.sleep(delay)
+            time_unit += 1
 
     print_results("SRTF", completed)
 
 
-def round_robin(processes, quantum=2):
-    time = 0
-    queue = deque(sorted(processes, key=lambda x: x.arrival_time))
+# -------------------- SJF (Non-preemptive) with timeline --------------------
+def sjf(processes, delay=0.5):
+    time_unit = 0
     completed = []
-
-    while queue:
-        p = queue.popleft()
-        if p.remaining_time > quantum:
-            if time < p.arrival_time:
-                time = p.arrival_time
-            p.remaining_time -= quantum
-            time += quantum
-            while queue and queue[0].arrival_time <= time:
-                queue.append(queue.popleft())
-            queue.append(p)
-        else:
-            if time < p.arrival_time:
-                time = p.arrival_time
-            time += p.remaining_time
-            p.turnaround_time = time - p.arrival_time
-            p.waiting_time = p.turnaround_time - p.burst_time
-            p.remaining_time = 0
-            completed.append(p)
-
-    print_results("Round Robin", completed)
-
-
-def priority_scheduling(processes):
-    time = 0
+    processes = sorted(processes, key=lambda x: (x.arrival_time, x.burst_time))
     ready = []
-    completed = []
-    processes = sorted(processes, key=lambda x: x.arrival_time)
 
+    print("\nSJF Execution Timeline:")
     while processes or ready:
-        while processes and processes[0].arrival_time <= time:
-            heapq.heappush(ready, (processes[0].priority, processes[0].arrival_time, processes.pop(0)))
+        while processes and processes[0].arrival_time <= time_unit:
+            heapq.heappush(ready, (processes[0].burst_time, processes.pop(0)))
         if ready:
-            pr, at, p = heapq.heappop(ready)
-            if time < p.arrival_time:
-                time = p.arrival_time
-            p.waiting_time = time - p.arrival_time
-            time += p.burst_time
+            bt, p = heapq.heappop(ready)
+            print(f"t={time_unit}: Running P{p.pid} for {p.burst_time} units")
+            time.sleep(delay)
+            p.waiting_time = time_unit - p.arrival_time
+            time_unit += p.burst_time
             p.turnaround_time = p.waiting_time + p.burst_time
             completed.append(p)
+            print(f"t={time_unit}: P{p.pid} finished")
         else:
-            time += 1
+            print(f"t={time_unit}: CPU idle")
+            time.sleep(delay)
+            time_unit += 1
 
-    print_results("Priority", completed)
+    print_results("SJF", completed)
 
 
 if __name__ == "__main__":
-    sample_processes = [
-        Process(1, 6, 0, 2),
-        Process(2, 8, 1, 1),
-        Process(3, 7, 2, 3),
-        Process(4, 3, 3, 2)
+    # Example dataset to SHOW difference
+    demo_processes = [
+        Process(1, 8, 0),  # Long process arrives first
+        Process(2, 4, 1),  # Shorter process arrives later
+        Process(3, 2, 2)  # Even shorter, arrives later
     ]
 
-    # Make deep copies for each algorithm
-    import copy
-    fcfs(copy.deepcopy(sample_processes))
-    sjf(copy.deepcopy(sample_processes))
-    srtf(copy.deepcopy(sample_processes))
-    round_robin(copy.deepcopy(sample_processes), quantum=3)
-    priority_scheduling(copy.deepcopy(sample_processes))
+    # Run both
+    sjf(copy.deepcopy(demo_processes), delay=0.3)
+    srtf(copy.deepcopy(demo_processes), delay=0.3)

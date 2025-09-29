@@ -1,0 +1,6 @@
+Algorithm,Avg Turnaround Time,Avg Waiting Time,Avg Response Time,Throughput (proc/time),Max Finish Time
+FCFS,424.02,413.35,413.35,0.0937,1067
+SJF (Non-Preemptive),294.91,284.24,284.24,0.0937,1067
+SRTF (Preemptive),294.17,283.5,280.52,0.0937,1067
+Priority (Preemptive),439.62,428.95,419.43,0.0937,1067
+Round Robin,601.35,590.68,82.26,0.0937,1067
